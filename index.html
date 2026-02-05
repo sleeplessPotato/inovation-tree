@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="id">
+	<head>
+		<meta charset="UTF-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+		/>
+		<title>Pohon Inovasi BPOM - Interactive Hover</title>
+		<style>
+			/* --- 1. VARIABLES --- */
+			:root {
+				--primary: #ff6b35;
+				--primary-dark: #d84315;
+				--accent: #2e7d32;
+				--bg-sky-top: #87ceeb;
+				--bg-sky-bot: #e0f7fa;
+				--text-main: #1a202c;
+				--text-sub: #4a5568;
+				--white: #ffffff;
+				--modal-bg: #f7fafc;
+				--shadow-soft: 0 10px 40px rgba(0, 0, 0, 0.2);
+			}
+
+			/* --- 2. GLOBAL RESET --- */
+			* {
+				box-sizing: border-box;
+				-webkit-tap-highlight-color: transparent;
+				outline: none;
+			}
+			body {
+				font-family: "Inter", "Segoe UI", sans-serif;
+				margin: 0;
+				padding: 0;
+				height: 100vh;
+				overflow: hidden;
+				background: linear-gradient(
+					to bottom,
+					var(--bg-sky-top),
+					var(--bg-sky-bot)
+				);
+				display: flex;
+				justify-content: center;
+				align-items: center;
+			}
+
+			/* --- 3. HEADER & TREE --- */
+			.header-container {
+				position: absolute;
+				top: 20px;
+				left: 50%;
+				transform: translateX(-50%);
+				z-index: 100;
+				text-align: center;
+				background: rgba(255, 255, 255, 0.85);
+				backdrop-filter: blur(12px);
+				-webkit-backdrop-filter: blur(12px);
+				padding: 1rem 2rem;
+				border-radius: 20px;
+				border: 1px solid rgba(255, 255, 255, 0.6);
+				box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+				width: 90%;
+				max-width: 600px;
+			}
+			.header-container h1 {
+				margin: 0;
+				font-size: clamp(1.2rem, 4vw, 1.8rem);
+				font-weight: 800;
+				color: var(--text-main);
+				text-transform: uppercase;
+			}
+			.header-container h2 {
+				margin: 4px 0;
+				font-size: clamp(0.8rem, 3vw, 1rem);
+				font-weight: 600;
+				color: var(--primary);
+			}
+			.tagline {
+				font-size: 0.8rem;
+				font-style: italic;
+				color: var(--accent);
+				margin-top: 5px;
+			}
+
+			.tree-wrapper {
+				position: relative;
+				width: min(90vw, 650px);
+				aspect-ratio: 1 / 1;
+				z-index: 10;
+				margin-top: 40px;
+			}
+			.tree-img {
+				width: 100%;
+				height: 100%;
+				object-fit: contain;
+				filter: drop-shadow(0 15px 30px rgba(0, 0, 0, 0.15));
+				animation: breathe 6s ease-in-out infinite alternate;
+			}
+
+			/* --- 4. FRUIT ITEM (NEW HOVER ANIMATION) --- */
+			.fruit-item {
+				position: absolute;
+				background: linear-gradient(135deg, var(--primary), #ff8a65);
+				color: white;
+				padding: 0.6em 1.2em;
+				border-radius: 50px;
+				font-weight: 700;
+				font-size: clamp(11px, 2.5vw, 14px);
+				box-shadow: 0 4px 10px rgba(255, 107, 53, 0.3);
+				cursor: pointer;
+				border: 2px solid rgba(255, 255, 255, 0.8);
+				white-space: nowrap;
+				transition: 0.2s;
+
+				transform-origin: top center;
+				/* Animasi Default: Masuk + Ayunan */
+				animation:
+					popIn 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards,
+					swing 3.5s ease-in-out infinite alternate;
+
+				transform: scale(0) translateX(-50%);
+			}
+
+			/* HOVER STATE: Pulse & Radar Glow */
+			.fruit-item:hover {
+				z-index: 50;
+				background: var(--primary-dark);
+				/* Ganti animasi swing dengan animasi hoverPulse */
+				animation: hoverPulse 1.5s infinite;
+			}
+
+			/* CLICK STATE: Press Effect */
+			.fruit-item:active {
+				transform: translate(-50%, -50%) scale(0.95) !important;
+				background: #bf360c;
+				transition: 0.1s;
+			}
+
+			/* --- 5. MODAL --- */
+			.modal-backdrop {
+				display: none;
+				position: fixed;
+				inset: 0;
+				background-color: rgba(20, 20, 30, 0.85);
+				z-index: 2000;
+				justify-content: center;
+				align-items: center;
+				backdrop-filter: blur(8px);
+				opacity: 0;
+				transition: opacity 0.3s ease;
+			}
+			.modal-backdrop.active {
+				opacity: 1;
+			}
+
+			.modal-card {
+				background: var(--white);
+				width: 90%;
+				max-width: 1000px;
+				height: 85vh;
+				border-radius: 20px;
+				overflow: hidden;
+				box-shadow: var(--shadow-soft);
+				display: grid;
+				grid-template-columns: 60% 40%;
+				transform: scale(0.96) translateY(20px);
+				transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+			}
+			.modal-backdrop.active .modal-card {
+				transform: scale(1) translateY(0);
+			}
+
+			/* Gallery Section */
+			.gallery-section {
+				background: #000;
+				position: relative;
+				display: flex;
+				flex-direction: column;
+				justify-content: center;
+				overflow: hidden;
+			}
+			.gallery-stage {
+				flex: 1;
+				position: relative;
+				width: 100%;
+				overflow: hidden;
+			}
+			.gallery-track {
+				display: flex;
+				height: 100%;
+				transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+			}
+			.gallery-slide {
+				min-width: 100%;
+				height: 100%;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			}
+			.gallery-slide img {
+				max-width: 100%;
+				max-height: 100%;
+				object-fit: contain;
+			}
+
+			.slider-btn {
+				position: absolute;
+				top: 50%;
+				transform: translateY(-50%);
+				background: rgba(255, 255, 255, 0.2);
+				backdrop-filter: blur(4px);
+				color: white;
+				border: none;
+				width: 44px;
+				height: 44px;
+				border-radius: 50%;
+				cursor: pointer;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-size: 20px;
+				transition: 0.2s;
+				z-index: 10;
+			}
+			.slider-btn:hover {
+				background: rgba(255, 255, 255, 0.9);
+				color: black;
+			}
+			.prev-btn {
+				left: 20px;
+			}
+			.next-btn {
+				right: 20px;
+			}
+
+			.thumbnail-strip {
+				height: 80px;
+				background: rgba(20, 20, 20, 0.9);
+				display: flex;
+				gap: 10px;
+				padding: 10px 20px;
+				overflow-x: auto;
+				align-items: center;
+				border-top: 1px solid rgba(255, 255, 255, 0.1);
+			}
+			.thumb {
+				height: 50px;
+				width: 80px;
+				border-radius: 6px;
+				cursor: pointer;
+				opacity: 0.5;
+				transition: 0.2s;
+				border: 2px solid transparent;
+				object-fit: cover;
+				flex-shrink: 0;
+			}
+			.thumb:hover {
+				opacity: 0.8;
+			}
+			.thumb.active {
+				opacity: 1;
+				border-color: var(--primary);
+				transform: scale(1.05);
+			}
+
+			/* Info Section */
+			.info-section {
+				padding: 30px;
+				display: flex;
+				flex-direction: column;
+				background: var(--modal-bg);
+				overflow-y: auto;
+			}
+			.info-header {
+				margin-bottom: 20px;
+				border-bottom: 2px solid #e2e8f0;
+				padding-bottom: 15px;
+				display: flex;
+				justify-content: space-between;
+				align-items: flex-start;
+			}
+			.info-title h3 {
+				margin: 0;
+				font-size: 1.8rem;
+				color: var(--text-main);
+				line-height: 1.2;
+			}
+			.info-label {
+				display: inline-block;
+				background: var(--primary);
+				color: white;
+				font-size: 0.7rem;
+				padding: 4px 8px;
+				border-radius: 4px;
+				text-transform: uppercase;
+				letter-spacing: 1px;
+				margin-bottom: 5px;
+			}
+			.btn-close-modal {
+				background: #edf2f7;
+				width: 36px;
+				height: 36px;
+				border-radius: 50%;
+				border: none;
+				cursor: pointer;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-size: 20px;
+				color: var(--text-sub);
+				transition: 0.2s;
+				flex-shrink: 0;
+			}
+			.btn-close-modal:hover {
+				background: #e53e3e;
+				color: white;
+				transform: rotate(90deg);
+			}
+			.info-body {
+				color: var(--text-sub);
+				line-height: 1.7;
+				font-size: 1rem;
+			}
+			.info-body p {
+				margin-top: 0;
+			}
+			.info-body ul {
+				padding-left: 20px;
+				margin-bottom: 1rem;
+			}
+
+			/* --- 6. MOBILE CSS --- */
+			@media (max-width: 768px) {
+				.modal-backdrop {
+					align-items: flex-end;
+					padding: 0;
+				}
+				.modal-card {
+					grid-template-columns: 1fr;
+					grid-template-rows: auto 1fr;
+					width: 100%;
+					height: 90vh;
+					border-radius: 20px 20px 0 0;
+					margin: 0;
+					transform: translateY(100%);
+				}
+				.modal-backdrop.active .modal-card {
+					transform: translateY(0);
+				}
+				.gallery-section {
+					height: 35vh;
+				}
+				.thumbnail-strip {
+					display: none;
+				}
+				.info-section {
+					padding: 20px;
+				}
+				.info-title h3 {
+					font-size: 1.4rem;
+				}
+			}
+
+			/* --- 7. EXTRAS --- */
+			.footer-container {
+				position: absolute;
+				bottom: 10px;
+				width: 100%;
+				text-align: center;
+				z-index: 90;
+				pointer-events: none;
+			}
+			.copyright-text {
+				background: rgba(255, 255, 255, 0.5);
+				backdrop-filter: blur(4px);
+				padding: 5px 15px;
+				border-radius: 20px;
+				font-size: 0.75rem;
+				color: #555;
+			}
+
+			.leaf {
+				position: absolute;
+				top: -50px;
+				pointer-events: none;
+				z-index: 5;
+				width: 20px;
+				height: 20px;
+				background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2366BB6A'%3E%3Cpath d='M17,8C8,10,5.9,16.17,3.82,21.34L5.71,22l1-2.3A4.49,4.49,0,0,0,8,20C19,20,22,3,22,3,21,5,14,5.25,9,6.25S2,11.5,2,13.5a6.22,6.22,0,0,0,1.75,3.75C7,8,17,8,17,8Z'/%3E%3C/svg%3E");
+				background-size: contain;
+				animation: fall linear forwards;
+			}
+
+			/* --- 8. ANIMATIONS KEYFRAMES --- */
+			@keyframes breathe {
+				from {
+					transform: scale(1);
+				}
+				to {
+					transform: scale(1.02);
+				}
+			}
+			@keyframes popIn {
+				0% {
+					transform: translate(-50%, -50%) scale(0);
+					opacity: 0;
+				}
+				100% {
+					transform: translate(-50%, -50%) scale(1);
+					opacity: 1;
+				}
+			}
+			@keyframes swing {
+				from {
+					transform: translate(-50%, -50%) rotate(-5deg);
+				}
+				to {
+					transform: translate(-50%, -50%) rotate(5deg);
+				}
+			}
+			@keyframes fall {
+				to {
+					transform: translate(var(--endX), 110vh) rotate(360deg);
+					opacity: 0;
+				}
+			}
+
+			/* NEW: Hover Pulse Animation */
+			@keyframes hoverPulse {
+				0% {
+					transform: translate(-50%, -50%) scale(1.15);
+					box-shadow: 0 0 0 0 rgba(255, 107, 53, 0.7);
+				}
+				50% {
+					transform: translate(-50%, -50%) scale(1.25);
+					box-shadow: 0 0 20px 10px rgba(255, 107, 53, 0);
+				}
+				100% {
+					transform: translate(-50%, -50%) scale(1.15);
+					box-shadow: 0 0 0 0 rgba(255, 107, 53, 0);
+				}
+			}
+
+			/* Guide */
+			.guide-overlay {
+				position: fixed;
+				inset: 0;
+				background: rgba(0, 0, 0, 0.85);
+				z-index: 3000;
+				display: flex;
+				flex-direction: column;
+				justify-content: center;
+				align-items: center;
+				transition: opacity 0.5s;
+			}
+			.guide-content {
+				text-align: center;
+				color: white;
+				animation: fadeUp 0.6s ease;
+			}
+			.guide-btn {
+				margin-top: 25px;
+				padding: 12px 35px;
+				background: var(--primary);
+				color: white;
+				border: none;
+				border-radius: 50px;
+				font-weight: bold;
+				cursor: pointer;
+				box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
+			}
+			@keyframes fadeUp {
+				from {
+					opacity: 0;
+					transform: translateY(20px);
+				}
+				to {
+					opacity: 1;
+					transform: translateY(0);
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<div id="guideOverlay" class="guide-overlay">
+			<div class="guide-content">
+				<div style="font-size: 50px; margin-bottom: 15px">👆</div>
+				<h2 style="margin: 0; font-size: 2rem">Pohon Inovasi</h2>
+				<p style="opacity: 0.8; font-size: 1.1rem">
+					Klik buahnya untuk memetik informasi
+				</p>
+				<button class="guide-btn" onclick="App.closeGuide()">Mulai</button>
+			</div>
+		</div>
+
+		<div id="leafLayer"></div>
+
+		<div class="header-container">
+			<h1>Pohon Inovasi</h1>
+			<h2>Balai POM di Kota Lubuklinggau</h2>
+			<div class="tagline">"Berakar pada Masalah, Berbuah pada Solusi"</div>
+		</div>
+
+		<div id="treeContainer" class="tree-wrapper">
+			<img
+				src="assets/pohon/pohon-inovasi_ful_opa.png"
+				alt="Pohon Inovasi"
+				class="tree-img"
+			/>
+		</div>
+
+		<div class="footer-container">
+			<div class="copyright-text">
+				&copy; 2024 Balai POM di Kota Lubuklinggau. All Rights Reserved.
+			</div>
+		</div>
+
+		<div id="mainModal" class="modal-backdrop">
+			<div class="modal-card">
+				<div class="gallery-section">
+					<div class="gallery-stage">
+						<div class="gallery-track" id="galleryTrack"></div>
+						<button
+							class="slider-btn prev-btn"
+							id="btnPrev"
+							onclick="App.slide(-1)"
+						>
+							&#10094;
+						</button>
+						<button
+							class="slider-btn next-btn"
+							id="btnNext"
+							onclick="App.slide(1)"
+						>
+							&#10095;
+						</button>
+					</div>
+					<div class="thumbnail-strip" id="thumbnailStrip"></div>
+				</div>
+				<div class="info-section">
+					<div class="info-header">
+						<div class="info-title">
+							<span class="info-label">Inovasi</span>
+							<h3 id="modalTitle">Judul</h3>
+						</div>
+						<button class="btn-close-modal" onclick="App.closeModal()">
+							&times;
+						</button>
+					</div>
+					<div class="info-body">
+						<div id="modalDesc"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<script src="data_inovasi.js"></script>
+		<script>
+			/* ENGINE */
+			const App = {
+				config: { centerX: 50, centerY: 35, radX: 38, radY: 28, buffer: 12 },
+				state: { usedPositions: [], slideIdx: 0, totalSlides: 0 },
+
+				init() {
+					this.renderTree();
+					this.startLeaves();
+					document
+						.getElementById("mainModal")
+						.addEventListener("click", (e) => {
+							if (e.target.id === "mainModal") this.closeModal();
+						});
+				},
+
+				renderTree() {
+					const container = document.getElementById("treeContainer");
+					Object.keys(DATA_INOVASI).forEach((key) => {
+						const pos = this.getPos();
+						if (!pos) return;
+						const el = document.createElement("div");
+						el.className = "fruit-item";
+						el.textContent = key;
+						el.style.left = pos.l + "%";
+						el.style.top = pos.t + "%";
+
+						// Animations: popIn (once) + swing (loop)
+						// "0s" delay for popIn, "Random negative" delay for swing
+						el.style.animationDelay = `0s, -${(Math.random() * 3).toFixed(2)}s`;
+
+						el.onclick = () => this.openModal(key);
+						container.appendChild(el);
+					});
+				},
+
+				getPos() {
+					let valid = false,
+						t,
+						l,
+						i = 0;
+					while (!valid && i < 100) {
+						const a = Math.random() * Math.PI * 2,
+							r = Math.sqrt(Math.random());
+						l = this.config.centerX + r * this.config.radX * Math.cos(a);
+						t = this.config.centerY + r * this.config.radY * Math.sin(a);
+						if (!this.checkCol(t, l)) valid = true;
+						i++;
+					}
+					return valid
+						? (this.state.usedPositions.push({ t, l }), { t, l })
+						: null;
+				},
+
+				checkCol(t, l) {
+					return this.state.usedPositions.some(
+						(p) =>
+							Math.abs(p.l - l) < this.config.buffer &&
+							Math.abs(p.t - t) < this.config.buffer,
+					);
+				},
+
+				openModal(key) {
+					const d = DATA_INOVASI[key];
+					document.getElementById("modalTitle").textContent = d.judul;
+					document.getElementById("modalDesc").innerHTML = d.deskripsi;
+					this.renderGallery(d.images, d.judul);
+
+					const m = document.getElementById("mainModal");
+					m.style.display = "flex";
+					requestAnimationFrame(() => m.classList.add("active"));
+				},
+
+				closeModal() {
+					const m = document.getElementById("mainModal");
+					m.classList.remove("active");
+					setTimeout(() => (m.style.display = "none"), 300);
+				},
+
+				closeGuide() {
+					const g = document.getElementById("guideOverlay");
+					g.style.opacity = 0;
+					setTimeout(() => (g.style.display = "none"), 500);
+				},
+
+				renderGallery(images, title) {
+					this.state.totalSlides = images.length;
+					this.state.slideIdx = 0;
+					const track = document.getElementById("galleryTrack");
+					const strip = document.getElementById("thumbnailStrip");
+					const pBtn = document.getElementById("btnPrev");
+					const nBtn = document.getElementById("btnNext");
+
+					track.innerHTML = "";
+					strip.innerHTML = "";
+					track.style.transform = "translateX(0)";
+
+					if (images.length === 0) {
+						track.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:white;flex-direction:column;"><span style="font-size:40px;opacity:0.5">📷</span><p>Tidak ada foto</p></div>`;
+						pBtn.style.display = "none";
+						nBtn.style.display = "none";
+						return;
+					}
+
+					images.forEach((src, i) => {
+						const slide = document.createElement("div");
+						slide.className = "gallery-slide";
+						slide.innerHTML = `<img src="${src}" alt="${title} ${i + 1}">`;
+						track.appendChild(slide);
+
+						const thumb = document.createElement("img");
+						thumb.className = `thumb ${i === 0 ? "active" : ""}`;
+						thumb.src = src;
+						thumb.onclick = () => this.goToSlide(i);
+						strip.appendChild(thumb);
+					});
+
+					const show = images.length > 1 ? "flex" : "none";
+					pBtn.style.display = show;
+					nBtn.style.display = show;
+				},
+
+				slide(dir) {
+					let next = this.state.slideIdx + dir;
+					if (next < 0) next = this.state.totalSlides - 1;
+					if (next >= this.state.totalSlides) next = 0;
+					this.goToSlide(next);
+				},
+
+				goToSlide(idx) {
+					this.state.slideIdx = idx;
+					document.getElementById("galleryTrack").style.transform =
+						`translateX(-${idx * 100}%)`;
+					document.querySelectorAll(".thumb").forEach((t, i) => {
+						if (i === idx) {
+							t.classList.add("active");
+							t.scrollIntoView({ behavior: "smooth", inline: "center" });
+						} else t.classList.remove("active");
+					});
+				},
+
+				startLeaves() {
+					setInterval(() => {
+						if (document.hidden) return;
+						const l = document.createElement("div");
+						l.className = "leaf";
+						l.style.left = Math.random() * 100 + "vw";
+						l.style.setProperty("--endX", Math.random() * 100 - 50 + "px");
+						l.style.animationDuration = Math.random() * 5 + 5 + "s";
+						document.getElementById("leafLayer").appendChild(l);
+						setTimeout(() => l.remove(), 10000);
+					}, 800);
+				},
+			};
+
+			window.onload = () => App.init();
+		</script>
+	</body>
+</html>
